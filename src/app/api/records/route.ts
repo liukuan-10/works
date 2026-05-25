@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(records)
-  } catch {
+  } catch (error) {
+    console.error('GET /api/records error:', error)
     return NextResponse.json({ error: '获取记录失败' }, { status: 500 })
   }
 }
