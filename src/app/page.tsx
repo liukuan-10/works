@@ -159,13 +159,29 @@ function ScrollPicker({ items, value, onChange, suffix }: { items: string[]; val
   )
 }
 
+const defaultAnalysisData: AnalysisData = {
+  monthlyExpenseData: [],
+  pieData: [],
+  rankingData: [],
+  categorySummaryData: [],
+  currentYear: new Date().getFullYear(),
+  currentMonth: new Date().getMonth() + 1,
+  selectedPieYear: new Date().getFullYear(),
+  selectedPieMonth: new Date().getMonth() + 1,
+  monthOverMonthData: [],
+  totalDelta: 0,
+  prevYear: new Date().getFullYear(),
+  prevMonth: new Date().getMonth(),
+  availableMonths: [],
+}
+
 export default function AccountingApp() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("data")
   const [records, setRecords] = useState<Record[]>([])
   const [stats, setStats] = useState<Stats>({ totalIncome: 0, totalExpense: 0, totalDebtIncrease: 0, totalRepayment: 0, netAssets: 0 })
   const [settings, setSettings] = useState<AppSettings>({ id: "", budgetLimit: 0, debtWarningLine: 0 })
-  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
+  const [analysisData, setAnalysisData] = useState<AnalysisData>(defaultAnalysisData)
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(null)
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set())
 
@@ -197,7 +213,8 @@ export default function AccountingApp() {
   const [listTypeFilter, setListTypeFilter] = useState<string>("all")
 
   // Pie chart month selector
-  const [pieMonthKey, setPieMonthKey] = useState("")
+  const now = new Date()
+  const [pieMonthKey, setPieMonthKey] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)
 
   // Chart style selector for monthly expense comparison
   const [chartStyle, setChartStyle] = useState<"bar" | "line" | "area" | "scatter">("bar")
