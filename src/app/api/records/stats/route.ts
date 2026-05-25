@@ -1,16 +1,20 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const records = await db.record.findMany()
+    const { data: records, error } = await supabase
+      .from('records')
+      .select('*')
+
+    if (error) throw error
 
     let totalIncome = 0
     let totalExpense = 0
     let totalDebtIncrease = 0
     let totalRepayment = 0
 
-    records.forEach((record) => {
+    records?.forEach((record) => {
       switch (record.type) {
         case '收入':
           totalIncome += record.amount
@@ -36,7 +40,8 @@ export async function GET() {
       totalRepayment,
       netAssets,
     })
-  } catch {
+  } catch (error) {
+    console.error('GET /api/records/stats error:', error)
     return NextResponse.json({ error: '获取统计数据失败' }, { status: 500 })
   }
 }

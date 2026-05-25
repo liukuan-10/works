@@ -1,4 +1,4 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 
 export async function POST() {
@@ -43,14 +43,16 @@ export async function POST() {
       { type: "支出", category: "交通", amount: 600, note: "年底出行", year: month > 3 ? year : year - 1, month: month > 3 ? month - 3 : month + 9, day: 28 },
     ]
 
-    const records = await Promise.all(
-      sampleRecords.map((r) =>
-        db.record.create({ data: r })
-      )
-    )
+    const { data, error } = await supabase
+      .from('records')
+      .insert(sampleRecords)
+      .select()
 
-    return NextResponse.json({ count: records.length, message: "示例数据已添加" })
-  } catch {
+    if (error) throw error
+
+    return NextResponse.json({ count: data?.length || 0, message: "示例数据已添加" })
+  } catch (error) {
+    console.error('POST /api/seed error:', error)
     return NextResponse.json({ error: '添加示例数据失败' }, { status: 500 })
   }
 }

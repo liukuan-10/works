@@ -1,4 +1,4 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -9,18 +9,23 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type')
     const category = searchParams.get('category')
 
-    const where: Record<string, unknown> = {}
-    if (year) where.year = parseInt(year)
-    if (month) where.month = parseInt(month)
-    if (type) where.type = type
-    if (category) where.category = category
+    let query = supabase
+      .from('records')
+      .select('*')
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .order('day', { ascending: false })
+      .order('created_at', { ascending: false })
 
-    const records = await db.record.findMany({
-      where,
-      orderBy: [{ year: 'desc' }, { month: 'desc' }, { day: 'desc' }, { createdAt: 'desc' }],
-    })
+    if (year) query = query.eq('year', parseInt(year))
+    if (month) query = query.eq('month', parseInt(month))
+    if (type) query = query.eq('type', type)
+    if (category) query = query.eq('category', category)
 
-    return NextResponse.json(records)
+    const { data, error } = await query
+
+    if (error) throw error
+    return NextResponse.json(data || [])
   } catch (error) {
     console.error('GET /api/records error:', error)
     return NextResponse.json({ error: '获取记录失败' }, { status: 500 })
@@ -36,20 +41,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
     }
 
-    const record = await db.record.create({
-      data: {
-        type,
-        category,
-        amount: parseFloat(amount),
-        note: note || '',
-        year: parseInt(year),
-        month: parseInt(month),
-        day: parseInt(day),
-      },
-    })
+    const { data, error } = await supabase
+      .from('records')
+      .insert([
+        {
+          type,
+          category,
+          amount: parseFloat(amount),
+          note: note || '',
+          year: parseInt(year),
+          month: parseInt(month),
+          day: parseInt(day),
+        },
+      ])
+      .select()
 
-    return NextResponse.json(record, { status: 201 })
-  } catch {
+    if (error) throw error
+    return NextResponse.json(data?.[0], { status: 201 })
+  } catch (error) {
+    console.error('POST /api/records error:', error)
     return NextResponse.json({ error: '创建记录失败' }, { status: 500 })
   }
 }
@@ -63,21 +73,25 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '缺少记录ID' }, { status: 400 })
     }
 
-    const record = await db.record.update({
-      where: { id },
-      data: {
-        ...(type && { type }),
-        ...(category && { category }),
-        ...(amount !== undefined && { amount: parseFloat(amount) }),
-        ...(note !== undefined && { note }),
-        ...(year && { year: parseInt(year) }),
-        ...(month && { month: parseInt(month) }),
-        ...(day && { day: parseInt(day) }),
-      },
-    })
+    const updateData: Record<string, unknown> = {}
+    if (type) updateData.type = type
+    if (category) updateData.category = category
+    if (amount !== undefined) updateData.amount = parseFloat(amount)
+    if (note !== undefined) updateData.note = note
+    if (year) updateData.year = parseInt(year)
+    if (month) updateData.month = parseInt(month)
+    if (day) updateData.day = parseInt(day)
 
-    return NextResponse.json(record)
-  } catch {
+    const { data, error } = await supabase
+      .from('records')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return NextResponse.json(data?.[0])
+  } catch (error) {
+    console.error('PUT /api/records error:', error)
     return NextResponse.json({ error: '更新记录失败' }, { status: 500 })
   }
 }
@@ -91,21 +105,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '缺少记录ID' }, { status: 400 })
     }
 
-    try {
-      await db.record.delete({
-        where: { id },
-      })
-    } catch (deleteError: unknown) {
-      // P2025: Record not found - treat as success (idempotent delete)
-      const prismaError = deleteError as { code?: string }
-      if (prismaError.code !== 'P2025') {
-        throw deleteError
-      }
-    }
+    const { error } = await supabase
+      .from('records')
+      .delete()
+      .eq('id', id)
 
+    if (error) throw error
     return NextResponse.json({ success: true })
-  } catch (error: unknown) {
-    console.error('Delete error:', error)
+  } catch (error) {
+    console.error('DELETE /api/records error:', error)
     return NextResponse.json({ error: '删除记录失败' }, { status: 500 })
   }
 }

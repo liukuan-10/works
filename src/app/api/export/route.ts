@@ -1,14 +1,19 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 
 export async function GET() {
   try {
-    const records = await db.record.findMany({
-      orderBy: [{ year: 'desc' }, { month: 'desc' }, { day: 'desc' }],
-    })
+    const { data: records, error } = await supabase
+      .from('records')
+      .select('*')
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .order('day', { ascending: false })
 
-    const data = records.map((r, i) => ({
+    if (error) throw error
+
+    const data = (records || []).map((r, i) => ({
       序号: i + 1,
       日期: `${r.year}-${String(r.month).padStart(2, '0')}-${String(r.day).padStart(2, '0')}`,
       类型: r.type,
@@ -20,7 +25,6 @@ export async function GET() {
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.json_to_sheet(data)
 
-    // Set column widths
     ws['!cols'] = [
       { wch: 6 },
       { wch: 12 },
@@ -40,7 +44,8 @@ export async function GET() {
         'Content-Disposition': 'attachment; filename=accounting_records.xlsx',
       },
     })
-  } catch {
+  } catch (error) {
+    console.error('GET /api/export error:', error)
     return NextResponse.json({ error: '导出失败' }, { status: 500 })
   }
 }
