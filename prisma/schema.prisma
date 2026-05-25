@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Record {
+  id        String   @id @default(cuid())
+  type      String   // 收入/支出/负债增加/还款
+  category  String   // 工资/餐饮/购物/交通/娱乐/医疗/房租/转账/其他
+  amount    Float
+  note      String   @default("")
+  year      Int
+  month     Int
+  day       Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Settings {
+  id              String   @id @default(cuid())
+  budgetLimit     Float    @default(0)
+  debtWarningLine Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
