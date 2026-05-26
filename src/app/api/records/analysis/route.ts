@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -15,14 +15,9 @@ export async function GET(request: NextRequest) {
     const selectedPieYear = pieYear ? parseInt(pieYear) : currentYear
     const selectedPieMonth = pieMonth ? parseInt(pieMonth) : currentMonth
 
-    const { data: allRecords, error: recordsError } = await supabase
-      .from('records')
-      .select('*')
-
-    if (recordsError) throw recordsError
-
-    const records = allRecords || []
-    const expenseRecords = records.filter((r) => r.type === '支出')
+    // All records
+    const allRecords = await db.record.findMany()
+    const expenseRecords = allRecords.filter((r) => r.type === '支出')
 
     // Monthly expense comparison (last 12 months)
     const monthlyExpense: Record<string, number> = {}
@@ -137,7 +132,7 @@ export async function GET(request: NextRequest) {
     // Available months for pie chart selector (months that have records)
     const availableMonths: { year: number; month: number; label: string }[] = []
     const monthSet = new Set<string>()
-    records.forEach((r) => {
+    allRecords.forEach((r) => {
       const key = `${r.year}-${r.month}`
       if (!monthSet.has(key)) {
         monthSet.add(key)
@@ -165,8 +160,7 @@ export async function GET(request: NextRequest) {
       prevMonth,
       availableMonths,
     })
-  } catch (error) {
-    console.error('GET /api/records/analysis error:', error)
+  } catch {
     return NextResponse.json({ error: '获取分析数据失败' }, { status: 500 })
   }
 }
