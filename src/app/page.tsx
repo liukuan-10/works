@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, Trash2, Download } from "lucide-react"
@@ -29,7 +27,7 @@ interface Stats {
 }
 
 const TYPES = ["收入", "支出", "负债增加", "还款"]
-const CATEGORIES = {
+const CATEGORIES: Record<string, string[]> = {
   "收入": ["工资", "奖金", "投资", "其他"],
   "支出": ["餐饮", "购物", "交通", "娱乐", "医疗", "房租", "教育", "通讯", "旅游", "其他"],
   "负债增加": ["信用卡", "借贷", "其他"],
@@ -43,7 +41,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
 
-  // Form states
   const [formType, setFormType] = useState("支出")
   const [formCategory, setFormCategory] = useState("餐饮")
   const [formAmount, setFormAmount] = useState("")
@@ -53,7 +50,6 @@ export default function Home() {
   const [formMonth, setFormMonth] = useState((now.getMonth() + 1).toString())
   const [formDay, setFormDay] = useState(now.getDate().toString())
 
-  // Load data
   const loadData = async () => {
     try {
       setLoading(true)
@@ -65,7 +61,7 @@ export default function Home() {
         setRecords(await recordsRes.json())
         setStats(await statsRes.json())
       }
-    } catch (error) {
+    } catch {
       toast({ title: "加载失败", variant: "destructive" })
     } finally {
       setLoading(false)
@@ -104,7 +100,7 @@ export default function Home() {
         setIsOpen(false)
         loadData()
       }
-    } catch (error) {
+    } catch {
       toast({ title: "添加失败", variant: "destructive" })
     }
   }
@@ -116,7 +112,7 @@ export default function Home() {
         toast({ title: "已删除" })
         loadData()
       }
-    } catch (error) {
+    } catch {
       toast({ title: "删除失败", variant: "destructive" })
     }
   }
@@ -129,11 +125,11 @@ export default function Home() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        a.download = "accounting_records.xlsx"
+        a.download = "records.xlsx"
         a.click()
         URL.revokeObjectURL(url)
       }
-    } catch (error) {
+    } catch {
       toast({ title: "导出失败", variant: "destructive" })
     }
   }
@@ -145,7 +141,7 @@ export default function Home() {
         toast({ title: "示例数据已添加" })
         loadData()
       }
-    } catch (error) {
+    } catch {
       toast({ title: "添加示例数据失败", variant: "destructive" })
     }
   }
@@ -153,33 +149,30 @@ export default function Home() {
   const categoryOptions = CATEGORIES[formType as keyof typeof CATEGORIES] || []
 
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case "收入":
-        return "text-emerald-600"
-      case "支出":
-        return "text-red-600"
-      case "负债增加":
-        return "text-amber-600"
-      case "还款":
-        return "text-blue-600"
-      default:
-        return "text-gray-600"
+    const colors: Record<string, string> = {
+      "收入": "text-emerald-600",
+      "支出": "text-red-600",
+      "负债增加": "text-amber-600",
+      "还款": "text-blue-600",
     }
+    return colors[type] || "text-gray-600"
   }
 
   const formatDate = (year: number, month: number, day: number) =>
     `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
+  const years = Array.from({ length: 10 }, (_, i) => (now.getFullYear() - 5 + i).toString())
+  const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString())
+  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString())
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">智能记账</h1>
           <p className="text-slate-600">管理您的收支，掌握财务动向</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card className="bg-white">
             <CardContent className="pt-6">
@@ -213,116 +206,11 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 mb-8">
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus size={20} />
-                新增记录
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>新增记录</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">类型</label>
-                  <Select value={formType} onValueChange={setFormType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TYPES.map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">类别</label>
-                  <Select value={formCategory} onValueChange={setFormCategory}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">金额</label>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={formAmount}
-                    onChange={e => setFormAmount(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">备注</label>
-                  <Input
-                    placeholder="可选"
-                    value={formNote}
-                    onChange={e => setFormNote(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-sm font-medium">年</label>
-                    <Select value={formYear} onValueChange={setFormYear}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 10 }, (_, i) => (now.getFullYear() - 5 + i).toString()).map(y => (
-                          <SelectItem key={y} value={y}>{y}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">月</label>
-                    <Select value={formMonth} onValueChange={setFormMonth}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => (i + 1).toString()).map(m => (
-                          <SelectItem key={m} value={m}>{m}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">日</label>
-                    <Select value={formDay} onValueChange={setFormDay}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 31 }, (_, i) => (i + 1).toString()).map(d => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Button onClick={handleAddRecord} className="w-full">
-                  保存
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
+          <Button onClick={() => setIsOpen(true)} className="gap-2">
+            <Plus size={20} />
+            新增记录
+          </Button>
           <Button variant="outline" onClick={handleSeedData}>
             加载示例
           </Button>
@@ -332,7 +220,82 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* Records Table */}
+        {isOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsOpen(false)
+            }}
+          >
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-lg font-semibold mb-4">新增记录</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">类型</label>
+                  <select value={formType} onChange={(e) => setFormType(e.target.value)} className="mt-1 w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2">
+                    {TYPES.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">类别</label>
+                  <select value={formCategory} onChange={(e) => setFormCategory(e.target.value)} className="mt-1 w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2">
+                    {categoryOptions.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">金额</label>
+                  <Input type="number" placeholder="0.00" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} className="mt-1" />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">备注</label>
+                  <Input placeholder="可选" value={formNote} onChange={(e) => setFormNote(e.target.value)} className="mt-1" />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-sm font-medium">年</label>
+                    <select value={formYear} onChange={(e) => setFormYear(e.target.value)} className="mt-1 w-full h-10 rounded-md border border-gray-300 bg-white px-2 py-2">
+                      {years.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">月</label>
+                    <select value={formMonth} onChange={(e) => setFormMonth(e.target.value)} className="mt-1 w-full h-10 rounded-md border border-gray-300 bg-white px-2 py-2">
+                      {months.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">日</label>
+                    <select value={formDay} onChange={(e) => setFormDay(e.target.value)} className="mt-1 w-full h-10 rounded-md border border-gray-300 bg-white px-2 py-2">
+                      {days.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <Button onClick={handleAddRecord} className="w-full mt-4">
+                  保存
+                </Button>
+              </div>
+              <button onClick={() => setIsOpen(false)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded">
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>记录列表</CardTitle>
@@ -364,12 +327,7 @@ export default function Home() {
                         <td className="text-right py-3 px-4 font-medium">¥{record.amount.toLocaleString()}</td>
                         <td className="py-3 px-4 text-slate-600">{record.note}</td>
                         <td className="py-3 px-4 text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(record.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(record.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                             <Trash2 size={16} />
                           </Button>
                         </td>
